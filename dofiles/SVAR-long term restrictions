@@ -1,1 +1,50 @@
+**Detecting unit roots**
+**A series with unit root is non-stationary so modeling work cannot be done with them.**
+**The augmented dfuller test is attempted to detect stationary series.**
+
+*Test on bases and difference
+
+dfuller D.logpr, trend regress lags(1)
+dfuller desem, trend regress lags(1)
+
+*Now they are stationary series
+
+**Long-Term Reestrictions** 
+*Remove a time trend from the unemployment series and store the residuals into unrate_adj
+quietly regress desem  t
+predict desem_adj, resid
+
+**create dummy variables, one of which equals 1 before the 1988 break point and the other of which equals 1 after the 1988 break point** 
+generate bp1 = (t<1988)
+generate bp2 = (t>=1988)
+
+*remove the period-specific mean from --- and store the resulting series into ---_adj.
+quietly regress D.logpr bp1 bp2, noconstant
+predict infla_adj, resid
+
+*Restriction matrix
+matrix C = (., 0 \ .,.)
+
+*Svar estimation
+svar infla_adj desem_adj, lags(1/8) lreq(C)
+
+*to estimate the covariance of the error terms which is can be found in the stored results e(Sigma);
+matlist e(Sigma)
+
+*impulse–responses a name: lr 
+*saved them to a file, lrirf.irf.
+irf create lr, set(lrirf) step(200) replace
+
+*We can view the impulse–responses with
+irf graph sirf, yline(0,lcolor(black)) xlabel(0(4)70) byopts(yrescale)
+use lrirf.irf, clear
+
+*We can view the complete impulse–responses with
+sort irfname impulse response step
+gen csirf = sirf
+by irfname impulse: replace csirf = sum(sirf) if response=="infla_adj"
+order irfname impulse response step sirf csirf
+save lrirf2.irf, replace
+irf set lrirf2.irf
+irf graph csirf, yline(0,lcolor(black)) noci xlabel(0(4)70) byopts(yrescale)
 
